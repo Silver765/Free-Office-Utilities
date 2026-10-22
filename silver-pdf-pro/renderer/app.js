@@ -1,7 +1,8 @@
 // Silver PDF Pro — application shell: menus, toolbar, tabs, files, shortcuts
 import { state, on, emit, openBytes, setCurrent, closeDoc, markDirty, undo, redo, imageStore, uid, PDFLib, guardEditable } from './core.js';
-import { buildView, setZoom, computeFit, goToPage, initViewerEvents, runSearch, gotoHit, getPageEls, drawSearch } from './viewer.js';
+import { buildView, setZoom, computeFit, goToPage, quality, setQuality, initViewerEvents, runSearch, gotoHit, getPageEls, drawSearch } from './viewer.js';
 import { initEditor, setTool, setPendingImage, renderPropbar, defaults, deleteAnnot, applyRedactions } from './editor.js';
+import { initGrid, toggleGrid, isGridOpen } from './grid.js';
 import { initSidebar, togglePanel, renderPanel, panel, buildRail } from './sidebar.js';
 import * as T from './tools.js';
 import { bakeAnnots } from './export.js';
@@ -83,7 +84,8 @@ function buildToolbar() {
   pg.addEventListener('focus', () => pg.select());
   refs.pageTot = h('span', { class: 'tb-text' }, '/ 0');
   $('#tbNav').replaceChildren(btn('up', 'Previous page', () => state.cur && goToPage(state.cur, state.cur.page - 1)), pg, refs.pageTot,
-    btn('down', 'Next page', () => state.cur && goToPage(state.cur, state.cur.page + 1)));
+    btn('down', 'Next page', () => state.cur && goToPage(state.cur, state.cur.page + 1)),
+    refs.grid = btn('grid', 'Show all pages (Ctrl+Shift+G)', () => toggleGrid()));
 
   const zs = refs.zoomSel = h('select', { class: 'tb-select', title: 'Zoom' });
   for (const z of [0.5, 0.75, 1, 1.25, 1.5, 2, 3, 4]) zs.append(h('option', { value: z }, Math.round(z * 100) + '%'));
@@ -95,9 +97,8 @@ function buildToolbar() {
 
   refs.tools = {};
   const tg = $('#tbTools'); tg.replaceChildren();
-  let group = tg;
   for (const t of TOOLS) {
-    if (t === '|') { const sep = h('div', { style: 'width:1px;height:20px;background:var(--line);margin:0 4px' }); tg.append(sep); continue; }
+    if (t === '|') { tg.append(h('div', { style: 'width:1px;height:20px;background:var(--line);margin:0 4px' })); continue; }
     const b = btn(t[1], t[2], () => setTool(state.tool === t[0] && t[0] !== 'select' ? 'select' : t[0]));
     refs.tools[t[0]] = b; tg.append(b);
   }
@@ -115,9 +116,10 @@ function zoomBy(f) { const d = state.cur; if (d) setZoom(d, d.zoom * f); }
 function refreshToolbar() {
   const d = state.cur;
   const has = !!d;
-  $$('#toolbar .tb-btn').forEach((b) => (b.disabled = !has && !['Open (Ctrl+O)'].includes(b.title)));
+  $$('#toolbar .tb-btn').forEach((b) => (b.disabled = !has && !['Open (Ctrl+O)', 'Menu'].includes(b.title)));
   if (refs.undo) { refs.undo.disabled = !d || !d.undo.length; refs.redo.disabled = !d || !d.redo.length; }
   if (refs.save) refs.save.disabled = !d;
+  refs.grid?.classList.toggle('active', isGridOpen());
   for (const [k, b] of Object.entries(refs.tools || {})) b.classList.toggle('active', state.tool === k);
   refs.pageIn.disabled = refs.zoomSel.disabled = !has;
   if (d) {
@@ -189,6 +191,7 @@ function toolItems() {
       ['form', 'Fill form fields', 'Interactive form panel', () => { panel.name = 'forms'; panel.open = true; buildRail(); renderPanel(); }],
     ]],
     ['Organize pages', [
+      ['grid', 'All pages grid', 'See every page at once', () => toggleGrid(true)],
       ['pages', 'Page thumbnails', 'Reorder by drag & drop', () => { panel.name = 'thumbs'; panel.open = true; buildRail(); renderPanel(); }],
       ['rotate', 'Rotate pages', '', async () => { const i = await askPages(D(), 'Rotate pages', sel(D())); if (!i) return; const r = await modal('Direction', (b) => { const s = select([['90', '90° clockwise'], ['-90', '90° counter-clockwise'], ['180', '180°']], '90'); b.append(row('Rotate', s)); return () => +s.value; }); if (r) T.rotatePages(D(), i, r.values); }],
       ['trash', 'Delete pages', '', async () => { const i = await askPages(D(), 'Delete pages', sel(D())); if (i && await confirmBox('Delete pages', `Delete ${i.length} page(s)?`, 'Delete', true)) T.deletePages(D(), i); }],
@@ -251,8 +254,12 @@ function buildMenus() {
       { label: 'Zoom in', icon: 'zoomin', key: 'Ctrl +', action: () => zoomBy(1.15), disabled: !D() }, { label: 'Zoom out', icon: 'zoomout', key: 'Ctrl -', action: () => zoomBy(1 / 1.15), disabled: !D() },
       { label: 'Actual size', key: 'Ctrl+0', action: () => setZoom(D(), 1), disabled: !D() },
       { label: 'Fit width', icon: 'fitw', action: () => setZoom(D(), computeFit(D(), 'width'), 'width'), disabled: !D() }, { label: 'Fit page', icon: 'fitp', action: () => setZoom(D(), computeFit(D(), 'page'), 'page'), disabled: !D() }, '-',
+      { label: 'Show all pages (grid)', icon: 'grid', key: 'Ctrl+Shift+G', action: () => toggleGrid(), disabled: !D() },
       { label: 'Page thumbnails', icon: 'pages', action: () => togglePanel('thumbs') }, { label: 'Bookmarks', icon: 'bookmark', action: () => togglePanel('bookmarks') },
       { label: 'Comments', icon: 'comment', action: () => togglePanel('comments') }, { label: 'Form fields', icon: 'form', action: () => togglePanel('forms') }, '-',
+      { label: `${quality.min === 1 ? '● ' : ''}Render quality: Fast`, action: () => setQuality(1) },
+      { label: `${quality.min === 2 ? '● ' : ''}Render quality: High (default)`, action: () => setQuality(2) },
+      { label: `${quality.min === 3 ? '● ' : ''}Render quality: Ultra (sharpest, uses more memory)`, action: () => setQuality(3) }, '-',
       { label: 'Toggle tools panel', icon: 'sidebarR', action: () => $('#toolspane').classList.toggle('collapsed') },
       { label: 'Toggle light / dark theme', icon: 'sun', action: toggleTheme },
     ],
@@ -261,13 +268,15 @@ function buildMenus() {
       { label: 'Keyboard shortcuts', icon: 'info', action: showShortcuts }, { label: 'About Silver PDF Pro', action: () => modal('About Silver PDF Pro', (b) => b.append(h('p', { class: 'msg', style: 'color:var(--text)' }, 'Silver PDF Pro 1.0 — an offline PDF viewer, annotator, form filler, signer and page organizer.'), h('p', { class: 'msg' }, 'Powered by pdf.js and pdf-lib. Your documents never leave your computer.')), [{ label: 'Close', primary: true, value: 'ok' }]) },
     ],
   };
-  const mb = $('#menubar'); mb.replaceChildren();
-  for (const name of Object.keys(defs)) {
-    const b = h('button', { class: 'menu-btn' }, name);
-    b.onclick = () => { const r = b.getBoundingClientRect(); showMenu(defs[name](), r.left, r.bottom + 2, b); };
-    b.onmouseenter = () => { if ($('.menu-btn.open') && !b.classList.contains('open')) b.click(); };
-    mb.append(b);
-  }
+  const mb = $('#tbMenu'); mb.replaceChildren();
+  const SUB_ICON = { File: 'file', Edit: 'undo', View: 'eye', Tools: 'tools', Help: 'info' };
+  const b = h('button', { class: 'tb-btn menu-btn', title: 'Menu', html: icon('menu') });
+  b.onclick = () => {
+    if (b.classList.contains('open')) return closeMenus();
+    const r = b.getBoundingClientRect();
+    showMenu(Object.keys(defs).map((name) => ({ label: name, icon: SUB_ICON[name], submenu: () => defs[name]() })), r.left, r.bottom + 2, b);
+  };
+  mb.append(b);
 }
 
 function showShortcuts() {
@@ -307,7 +316,6 @@ function closeFind() {
 /* ================= theme ================= */
 function applyTheme(t) {
   document.body.dataset.theme = t;
-  $('#themeBtn').innerHTML = icon(t === 'dark' ? 'sun' : 'moon');
   try { localStorage.setItem('pdfstudio.theme', t); } catch {}
 }
 function toggleTheme() { applyTheme(document.body.dataset.theme === 'dark' ? 'light' : 'dark'); }
@@ -326,13 +334,12 @@ function updateAll() { renderTabs(); refreshToolbar(); updateStatus(); }
 /* ================= init ================= */
 function init() {
   try { applyTheme(localStorage.getItem('pdfstudio.theme') || 'dark'); } catch { applyTheme('dark'); }
-  $('#themeBtn').onclick = toggleTheme;
   state.askPassword = (wrong) => new Promise((res) => {
     modal(wrong ? 'Incorrect password' : 'Password required', (b) => { const p = field('password', ''); b.append(h('p', { class: 'msg' }, 'This document is password protected. It will open in view-only mode.'), row('Password', p)); return () => p.value; },
       [{ label: 'Cancel', value: null }, { label: 'Open', primary: true, value: 'ok' }]).then((r) => res(r ? r.values : null));
   });
   buildMenus(); buildToolbar(); renderToolsPane();
-  initViewerEvents(); initEditor(); initSidebar();
+  initViewerEvents(); initEditor(); initSidebar(); initGrid();
 
   on('current', (d) => {
     document.body.classList.toggle('has-doc', !!d);
@@ -343,6 +350,7 @@ function init() {
   });
   on('tabs', updateAll);
   on('tool', () => { refreshToolbar(); });
+  on('grid', () => refreshToolbar());
   on('page', () => { refreshToolbar(); updateStatus(); });
   on('zoom', () => { refreshToolbar(); updateStatus(); });
   on('annots', () => { refreshToolbar(); updateStatus(); });
@@ -395,7 +403,12 @@ function init() {
     const typing = e.target.matches('input,textarea,select');
     const mod = e.ctrlKey || e.metaKey, k = e.key.toLowerCase();
     if (document.querySelector('.modal-bg')) return;
-    if (mod && k === 'o') { e.preventDefault(); doOpen(); }
+    if (mod && k === 'c' && !typing) {
+      const txt = window.getSelection()?.toString();
+      if (txt) { e.preventDefault(); (navigator.clipboard?.writeText(txt) ?? Promise.reject()).catch(() => document.execCommand('copy')); toast('Copied'); }
+    }
+    else if (mod && e.shiftKey && k === 'g') { e.preventDefault(); toggleGrid(); }
+    else if (mod && k === 'o') { e.preventDefault(); doOpen(); }
     else if (mod && k === 's') { e.preventDefault(); saveDoc(state.cur, e.shiftKey); }
     else if (mod && k === 'p') { e.preventDefault(); state.cur && T.printDoc(state.cur); }
     else if (mod && k === 'w') { e.preventDefault(); state.cur && requestClose(state.cur); }

@@ -234,3 +234,25 @@ table.props td:first-child{color:var(--muted);width:140px}
   #printRoot img{display:block;width:100%;page-break-after:always;break-after:page}
   @page{margin:0}
 }
+
+/* page grid (all pages at once) */
+#gridview{position:absolute;inset:0;z-index:4;background:var(--canvas);display:flex;flex-direction:column}
+.grid-bar{display:flex;align-items:center;gap:4px;padding:6px 10px;background:var(--bg2);border-bottom:1px solid var(--line);flex:none;flex-wrap:wrap}
+.grid-bar input[type=range]{width:130px}
+.grid-body{flex:1;overflow:auto;padding:18px;display:flex;flex-wrap:wrap;gap:14px;align-content:flex-start;--tw:170px}
+.gthumb{display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px;border-radius:8px;border:2px solid transparent;cursor:pointer;position:relative}
+.gthumb:hover{background:rgba(127,127,127,.18)}
+.gthumb.cur{border-color:var(--muted)}
+.gthumb.sel{border-color:var(--blue);background:rgba(59,130,246,.25)}
+.gthumb canvas{background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.45);display:block}
+.gthumb .n{font-size:12px;color:var(--text)}
+.gthumb.drop-before::before,.gthumb.drop-after::after{content:"";position:absolute;top:4px;bottom:4px;width:4px;background:var(--accent);border-radius:2px}
+.gthumb.drop-before::before{left:-9px}.gthumb.drop-after::after{right:-9px}
+
+/* text selection must work on the page text (body is user-select:none for the app chrome) */
+.page .textLayer,.page .textLayer *{user-select:text;-webkit-user-select:text}
+.page .linkLayer{pointer-events:none}
+.page .linkLayer a{pointer-events:auto}
+
+.dd-item.sub-open{background:var(--hover)}
+.dd-item .k svg{width:14px;height:14px}

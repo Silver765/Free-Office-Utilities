@@ -55,6 +55,7 @@ const P = {
   lock: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
   flatten: '<path d="m12 3 9 5-9 5-9-5z"/><path d="m3 13 9 5 9-5"/>',
   export: '<path d="M12 15V3M7 8l5-5 5 5M5 14v6h14v-6"/>',
+  menu: '<path d="M4 6h16M4 12h16M4 18h16"/>',
   list: '<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>',
   grid: '<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>',
   blank: '<rect x="5" y="3" width="14" height="18" rx="1"/>',
@@ -143,25 +144,39 @@ export function checkRow(label, checked) {
 }
 
 /* Dropdown menus */
-let openDD = null;
+let openDDs = [];
 export function closeMenus() {
-  openDD?.remove(); openDD = null;
+  openDDs.forEach((d) => d.remove()); openDDs = [];
   $$('.menu-btn.open').forEach((b) => b.classList.remove('open'));
 }
-export function showMenu(items, x, y, anchor) {
-  closeMenus();
+function placeMenu(dd, x, y, rowRect) {
+  const r = dd.getBoundingClientRect();
+  let left = x;
+  if (rowRect && left + r.width > innerWidth - 4) left = rowRect.left - r.width + 4; // flip flyout to the left edge
+  dd.style.left = Math.max(4, Math.min(left, innerWidth - r.width - 4)) + 'px';
+  dd.style.top = Math.max(4, Math.min(y, innerHeight - r.height - 4)) + 'px';
+}
+/** items: {label, icon, key, action, disabled, submenu: items | () => items} or '-'. depth > 0 builds a flyout. */
+export function showMenu(items, x, y, anchor, depth = 0) {
+  if (depth === 0) closeMenus();
+  else { openDDs.slice(depth).forEach((d) => d.remove()); openDDs = openDDs.slice(0, depth); }
   const dd = h('div', { class: 'dropdown' });
   for (const it of items) {
     if (it === '-') { dd.append(h('div', { class: 'dd-sep' })); continue; }
-    dd.append(h('div', {
-      class: 'dd-item' + (it.disabled ? ' disabled' : ''),
-      onclick: () => { closeMenus(); it.action?.(); },
-    }, it.icon ? h('span', { html: icon(it.icon) }) : h('span', { style: 'width:18px' }), it.label, it.key ? h('span', { class: 'k' }, it.key) : null));
+    const row = h('div', { class: 'dd-item' + (it.disabled ? ' disabled' : '') },
+      it.icon ? h('span', { html: icon(it.icon) }) : h('span', { style: 'width:18px' }), it.label,
+      it.submenu ? h('span', { class: 'k', html: icon('right') }) : it.key ? h('span', { class: 'k' }, it.key) : null);
+    if (it.submenu) {
+      const open = () => { const r = row.getBoundingClientRect(); showMenu(typeof it.submenu === 'function' ? it.submenu() : it.submenu, r.right - 2, r.top - 4, null, depth + 1); row.classList.add('sub-open'); };
+      row.addEventListener('mouseenter', open); row.addEventListener('click', open);
+    } else {
+      row.addEventListener('mouseenter', () => { openDDs.slice(depth + 1).forEach((d) => d.remove()); openDDs = openDDs.slice(0, depth + 1); });
+      row.addEventListener('click', () => { closeMenus(); it.action?.(); });
+    }
+    dd.append(row);
   }
   document.body.append(dd);
-  const r = dd.getBoundingClientRect();
-  dd.style.left = Math.max(4, Math.min(x, innerWidth - r.width - 4)) + 'px';
-  dd.style.top = Math.max(4, Math.min(y, innerHeight - r.height - 4)) + 'px';
-  openDD = dd; anchor?.classList.add('open');
+  placeMenu(dd, x, y, depth ? { left: x - 2 - 230 } : null);
+  openDDs.push(dd); anchor?.classList.add('open');
 }
-document.addEventListener('mousedown', (e) => { if (openDD && !openDD.contains(e.target) && !e.target.closest('.menu-btn')) closeMenus(); }, true);
+document.addEventListener('mousedown', (e) => { if (openDDs.length && !openDDs.some((d) => d.contains(e.target)) && !e.target.closest('.menu-btn')) closeMenus(); }, true);

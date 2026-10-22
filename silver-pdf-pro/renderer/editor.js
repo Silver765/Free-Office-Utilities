@@ -225,7 +225,16 @@ function onDown(e) {
     if (handle && doc.sel) { e.preventDefault(); return startResize(e, doc, handle.dataset.h, pe); }
     if (g) { e.preventDefault(); selectAnnot(doc, g.dataset.id); return startMove(e, doc, pe); }
     const mk = hitMarkup(doc, i, x, y);
-    if (mk) { e.preventDefault(); selectAnnot(doc, mk.id); return startMove(e, doc, pe); }
+    if (mk) {
+      // let text selection start natively; only a plain click (no drag, no selection) selects the highlight
+      const sx = e.clientX, sy = e.clientY;
+      const up = (ev) => {
+        window.removeEventListener('pointerup', up);
+        if (Math.hypot(ev.clientX - sx, ev.clientY - sy) < 4 && window.getSelection()?.isCollapsed !== false) selectAnnot(doc, mk.id);
+      };
+      window.addEventListener('pointerup', up);
+      return;
+    }
     if (doc.sel) selectAnnot(doc, null);
     return; // text selection proceeds natively
   }

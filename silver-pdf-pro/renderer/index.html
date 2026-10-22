@@ -10,14 +10,9 @@
 </head>
 <body data-tool="select" data-theme="dark">
 <div id="app">
-  <header id="topbar">
-    <div class="brand"><span class="logo">S</span><span class="brand-name">Silver PDF Pro</span></div>
-    <nav id="menubar"></nav>
-    <div class="spacer"></div>
-    <button class="icon-btn" id="themeBtn" title="Toggle light/dark theme"></button>
-  </header>
   <div id="tabs"></div>
   <div id="toolbar">
+    <div class="tb-group" id="tbMenu"></div>
     <div class="tb-group" id="tbFile"></div>
     <div class="tb-group" id="tbNav"></div>
     <div class="tb-group" id="tbZoom"></div>
@@ -31,6 +26,7 @@
     <aside id="leftpane"><div id="leftpane-head"></div><div id="leftpane-body"></div></aside>
     <section id="viewer">
       <div id="scroller"><div id="pages"></div></div>
+      <div id="gridview" hidden></div>
       <div id="welcome"></div>
       <div id="findbar" hidden></div>
       <div id="dropveil" hidden>Drop PDF files to open</div>

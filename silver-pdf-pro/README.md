@@ -39,7 +39,7 @@ npm run package    # Windows build in dist/
 |---|---|---|
 | Windows | `Silver PDF Pro-Setup-<v>-x64.exe` (installer), `Silver PDF Pro-<v>-win-x64.exe` (portable) | Windows |
 | macOS | `Silver PDF Pro-<v>-mac-x64.dmg` (Intel), `Silver PDF Pro-<v>-mac-arm64.dmg` (Apple Silicon) | a Mac |
-| Linux | `.AppImage`, `.deb` (x64) | Linux |
+| Linux | `.AppImage`, `.deb`, `.rpm` (x64) | Linux |
 
 ```
 npm run dist:win     # on Windows

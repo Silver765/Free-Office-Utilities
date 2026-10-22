@@ -7,6 +7,14 @@ export function vpRect(vp, r) {
   const [ax, ay] = vp.convertToViewportPoint(r[0], r[1]), [bx, by] = vp.convertToViewportPoint(r[2], r[3]);
   return [ax, ay, bx, by];
 }
+export const quality = { min: 2 };
+try { quality.min = +localStorage.getItem('silverpdf.quality') || 2; } catch {}
+export function setQuality(v) {
+  quality.min = v;
+  try { localStorage.setItem('silverpdf.quality', v); } catch {}
+  const doc = state.cur; if (!doc) return;
+  pageEls.forEach((el, i) => { if (isNear(el)) renderPage(doc, i); });
+}
 export const hooks = { renderOverlay: null };
 const scroller = () => $('#scroller');
 const pagesEl = () => $('#pages');
@@ -79,11 +87,16 @@ export async function renderPage(doc, i) {
   el._task?.cancel();
   el._rendered = true;
   const info = doc.pages[i];
-  const zoom = doc.zoom, dpr = Math.min(window.devicePixelRatio || 1, 2);
-  const vp = info.page.getViewport({ scale: zoom * dpr });
+  const zoom = doc.zoom;
+  // supersample: never render below `quality.min`x the screen resolution, then let the browser downscale smoothly
+  let px = Math.max(window.devicePixelRatio || 1, quality.min);
+  const base = info.page.getViewport({ scale: zoom });
+  const maxPixels = 40e6;
+  px = Math.min(px, Math.sqrt(maxPixels / (base.width * base.height)));
+  const vp = info.page.getViewport({ scale: zoom * px });
   const fresh = document.createElement('canvas');
   fresh.className = 'pcanvas';
-  fresh.width = Math.floor(vp.width); fresh.height = Math.floor(vp.height);
+  fresh.width = Math.ceil(vp.width); fresh.height = Math.ceil(vp.height);
   const task = info.page.render({ canvasContext: fresh.getContext('2d'), viewport: vp, background: 'rgb(255,255,255)' });
   el._task = task;
   try { await task.promise; } catch { return; }

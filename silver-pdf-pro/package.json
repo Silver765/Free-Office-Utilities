@@ -1,7 +1,7 @@
 {
   "name": "silver-pdf-pro",
   "productName": "Silver PDF Pro",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A full-featured PDF viewer, editor and organizer inspired by Acrobat Pro",
   "main": "main.js",
   "scripts": {
@@ -70,7 +70,7 @@
         }
       ],
       "icon": "build/icon.png",
-      "artifactName": "${productName}-${version}-win-${arch}.${ext}"
+      "artifactName": "${productName}-${version}-win-${arch}-Portable.${ext}"
     },
     "nsis": {
       "oneClick": false,
@@ -99,7 +99,7 @@
       ],
       "category": "public.app-category.productivity",
       "icon": "build/icon.png",
-      "artifactName": "${productName}-${version}-mac-${arch}.${ext}",
+      "artifactName": "${productName}-${version}-mac-${arch}-Portable.${ext}",
       "hardenedRuntime": false,
       "gatekeeperAssess": false
     },
@@ -127,7 +127,16 @@
       ],
       "artifactName": "${productName}-${version}-linux-${arch}.${ext}"
     },
-    "publish": null
+    "publish": null,
+    "portable": {
+      "artifactName": "${productName}-${version}-win-${arch}-Portable.${ext}"
+    },
+    "appImage": {
+      "artifactName": "${productName}-${version}-linux-${arch}-Portable.${ext}"
+    },
+    "dmg": {
+      "artifactName": "${productName}-${version}-mac-${arch}.${ext}"
+    }
   },
   "repository": {
     "type": "git",

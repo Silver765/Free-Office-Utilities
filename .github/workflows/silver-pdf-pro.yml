@@ -1,0 +1,52 @@
+name: Build Silver PDF Pro installers
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            script: dist:win
+          - os: macos-latest        # builds both Intel (x64) and Apple Silicon (arm64)
+            script: dist:mac
+          - os: ubuntu-latest
+            script: dist:linux
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: silver-pdf-pro
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm, cache-dependency-path: silver-pdf-pro/package-lock.json }
+      - run: npm ci
+      - run: npm run ${{ matrix.script }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: installers-${{ matrix.os }}
+          path: |
+            silver-pdf-pro/release/*.exe
+            silver-pdf-pro/release/*.dmg
+            silver-pdf-pro/release/*.zip
+            silver-pdf-pro/release/*.AppImage
+            silver-pdf-pro/release/*.deb
+      - name: Attach to GitHub release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            silver-pdf-pro/release/*.exe
+            silver-pdf-pro/release/*.dmg
+            silver-pdf-pro/release/*.zip
+            silver-pdf-pro/release/*.AppImage
+            silver-pdf-pro/release/*.deb

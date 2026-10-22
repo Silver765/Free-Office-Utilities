@@ -1,0 +1,131 @@
+{
+  "name": "silver-pdf-pro",
+  "productName": "Silver PDF Pro",
+  "version": "1.0.0",
+  "description": "A full-featured PDF viewer, editor and organizer inspired by Acrobat Pro",
+  "main": "main.js",
+  "scripts": {
+    "vendor": "node scripts/vendor.js",
+    "postinstall": "node scripts/vendor.js",
+    "start": "electron .",
+    "web": "node scripts/serve.js",
+    "sample": "node scripts/make-samples.js",
+    "package": "node scripts/vendor.js && npx @electron/packager . \"Silver PDF Pro\" --platform=win32 --arch=x64 --out=dist --overwrite --ignore=\"^/(samples|dist|build)\" --prune=true",
+    "dist:win": "electron-builder --win --x64 --publish never",
+    "dist:mac": "electron-builder --mac --x64 --arm64 --publish never",
+    "dist:linux": "electron-builder --linux --x64 --publish never",
+    "dist": "electron-builder"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@pdf-lib/fontkit": "^1.1.1",
+    "@tesseract.js-data/eng": "^1.0.0",
+    "electron": "^45.0.0",
+    "electron-builder": "^26.15.3",
+    "pdf-lib": "^1.17.1",
+    "pdfjs-dist": "^6.4.299",
+    "tesseract.js": "^7.0.0"
+  },
+  "author": {
+    "name": "Silver PDF Pro"
+  },
+  "homepage": "https://example.com",
+  "build": {
+    "appId": "com.silverpdfpro.app",
+    "productName": "Silver PDF Pro",
+    "copyright": "Copyright \u00a9 Silver PDF Pro",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "renderer/**/*",
+      "package.json",
+      "!**/*.map"
+    ],
+    "asar": true,
+    "fileAssociations": [
+      {
+        "ext": "pdf",
+        "name": "PDF Document",
+        "role": "Editor",
+        "mimeType": "application/pdf"
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.png",
+      "artifactName": "${productName}-${version}-win-${arch}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "artifactName": "${productName}-Setup-${version}-${arch}.${ext}"
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "category": "public.app-category.productivity",
+      "icon": "build/icon.png",
+      "artifactName": "${productName}-${version}-mac-${arch}.${ext}",
+      "hardenedRuntime": false,
+      "gatekeeperAssess": false
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "deb",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "category": "Office",
+      "icon": "build/icon.png",
+      "maintainer": "Silver PDF Pro <noreply@example.com>",
+      "synopsis": "PDF viewer and editor",
+      "mimeTypes": [
+        "application/pdf"
+      ],
+      "artifactName": "${productName}-${version}-linux-${arch}.${ext}"
+    }
+  }
+}

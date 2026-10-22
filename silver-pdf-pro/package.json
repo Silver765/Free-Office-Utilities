@@ -126,6 +126,11 @@
         "application/pdf"
       ],
       "artifactName": "${productName}-${version}-linux-${arch}.${ext}"
-    }
+    },
+    "publish": null
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Silver765/Free-Office-Utilities.git"
   }
 }
